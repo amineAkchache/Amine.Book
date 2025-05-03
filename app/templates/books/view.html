@@ -1,0 +1,303 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('books.library') }}">Library</a></li>
+                <li class="breadcrumb-item active">{{ book.title }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Book Cover Column -->
+    <div class="col-lg-4 col-md-5 mb-4">
+        <div class="card shadow h-100">
+            <div class="position-relative">
+                {% if book.cover_image %}
+                    <img src="{{ book.cover_image }}" class="card-img-top" alt="{{ book.title }}" style="max-height: 400px; object-fit: contain;">
+                {% else %}
+                    <div class="bg-light d-flex align-items-center justify-content-center" style="height: 300px;">
+                        <i class="fas fa-book fa-4x text-secondary"></i>
+                    </div>
+                {% endif %}
+                
+                <!-- Status Badge -->
+                {% if progress.status %}
+                <span class="position-absolute top-0 end-0 m-2 badge 
+                    {% if progress.status == 'want_to_read' %}bg-secondary
+                    {% elif progress.status == 'reading' %}bg-primary
+                    {% elif progress.status == 'finished' %}bg-success
+                    {% endif %}">
+                    {{ progress.status|replace('_', ' ')|title }}
+                </span>
+                {% endif %}
+            </div>
+            
+            <div class="card-body">
+                <h2 class="card-title">{{ book.title }}</h2>
+                <p class="card-text text-muted">by {{ book.authors }}</p>
+                
+                {% if book.avg_rating %}
+                <div class="mb-3">
+                    {% for i in range(5) %}
+                        {% if i < book.avg_rating|int %}
+                            <i class="fas fa-star text-warning"></i>
+                        {% elif i < book.avg_rating and i + 0.5 > book.avg_rating %}
+                            <i class="fas fa-star-half-alt text-warning"></i>
+                        {% else %}
+                            <i class="far fa-star text-warning"></i>
+                        {% endif %}
+                    {% endfor %}
+                    <span class="text-muted ms-1">({{ book.avg_rating }})</span>
+                </div>
+                {% endif %}
+                
+                <div class="book-meta mb-3">
+                    {% if book.published_date %}
+                        <p><strong>Published:</strong> {{ book.published_date }}</p>
+                    {% endif %}
+                    
+                    {% if book.categories %}
+                        <p><strong>Categories:</strong> {{ book.categories }}</p>
+                    {% endif %}
+                    
+                    {% if book.page_count %}
+                        <p><strong>Pages:</strong> {{ book.page_count }}</p>
+                    {% endif %}
+                </div>
+                
+                {% if progress.status == 'reading' %}
+                <div class="mb-4">
+                    <h5>Reading Progress</h5>
+                    <div class="progress mb-2" style="height: 8px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ progress.progress }}%" 
+                            aria-valuenow="{{ progress.progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="d-flex justify-content-between small">
+                        <span>{{ progress.progress }}% complete</span>
+                        <span>{{ progress.progress_type }}</span>
+                    </div>
+                    
+                    {% if progress.start_date %}
+                        <p class="mt-2 mb-0 small text-muted">
+                            Started: {{ progress.start_date.strftime('%B %d, %Y') }}
+                        </p>
+                    {% endif %}
+                </div>
+                {% elif progress.status == 'finished' and progress.end_date %}
+                <div class="mb-4">
+                    <h5>Reading Completed</h5>
+                    <p class="mb-1">
+                        <strong>Finished:</strong> {{ progress.end_date.strftime('%B %d, %Y') }}
+                    </p>
+                    {% if progress.start_date %}
+                        <p class="mb-0">
+                            <strong>Started:</strong> {{ progress.start_date.strftime('%B %d, %Y') }}
+                        </p>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <div class="d-grid gap-2">
+                    <form method="POST" action="{{ url_for('books.delete', book_id=book.id) }}" class="mt-2">
+                        <button type="submit" class="btn btn-outline-danger w-100"
+                                onclick="return confirm('Are you sure you want to delete this book from your library?')">
+                            <i class="fas fa-trash-alt me-2"></i> Remove from Library
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Book Details Column -->
+    <div class="col-lg-8 col-md-7">
+        <!-- Description Card -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-light">
+                <h3 class="mb-0">Description</h3>
+            </div>
+            <div class="card-body">
+                {% if book.description %}
+                    <div class="book-description">{{ book.get_formatted_description()|safe }}</div>
+                {% else %}
+                    <p class="text-muted">No description available.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- PDF Viewer (if available) -->
+        {% if book.pdf_filename %}
+        <div class="card shadow mb-4">
+            <div class="card-header bg-light">
+                <h3 class="mb-0">Book PDF</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="ratio ratio-16x9">
+                    <iframe src="{{ url_for('static', filename='uploads/' ~ book.pdf_filename) }}" 
+                            style="border: none;"></iframe>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Progress Update Form -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">Update Reading Progress</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('books.view', book_id=book.id) }}">
+                    {{ progress_form.hidden_tag() }}
+                    <input type="hidden" name="update_progress" value="1">
+                    
+                    <div class="mb-3">
+                        {{ progress_form.status.label(class="form-label") }}
+                        {{ progress_form.status(class="form-select") }}
+                    </div>
+                    
+                    <div id="progress-container" class="mb-3">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                {{ progress_form.progress.label(class="form-label") }}
+                                {{ progress_form.progress(class="form-control") }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ progress_form.progress_type.label(class="form-label") }}
+                                {{ progress_form.progress_type(class="form-select") }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i> Save Progress
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Review Section -->
+        <div class="card shadow">
+            <div class="card-header bg-light">
+                <h3 class="mb-0">Your Review</h3>
+            </div>
+            <div class="card-body">
+                {% if review %}
+                    <div class="mb-4">
+                        <div class="stars-container mb-2">
+                            {% for i in range(5) %}
+                                {% if i < review.rating %}
+                                    <i class="fas fa-star text-warning"></i>
+                                {% else %}
+                                    <i class="far fa-star text-warning"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        
+                        {% if review.review_text %}
+                            <div class="review-content mt-3">
+                                {{ review.get_formatted_review()|safe }}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">You rated this book but didn't write a review.</p>
+                        {% endif %}
+                        
+                        <div class="text-muted mt-2 small">
+                            Last updated: {{ review.updated_at.strftime('%B %d, %Y') }}
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#editReviewForm">
+                        <i class="fas fa-edit me-2"></i> Edit Review
+                    </button>
+                    
+                    <div class="collapse mt-3" id="editReviewForm">
+                {% endif %}
+                
+                <form method="POST" action="{{ url_for('books.view', book_id=book.id) }}">
+                    {{ review_form.hidden_tag() }}
+                    <input type="hidden" name="submit_review" value="1">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Rating</label>
+                        <div id="star-container" class="mb-2">
+                            {% for i in range(1, 6) %}
+                                <i class="far fa-star star-rating{% if review and i <= review.rating %} fas text-warning{% endif %}" 
+                                   data-value="{{ i }}" style="cursor: pointer; font-size: 1.5rem;"></i>
+                            {% endfor %}
+                            {{ review_form.rating(type="hidden") }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ review_form.review_text.label(class="form-label") }}
+                        {{ review_form.review_text(class="form-control", rows="5") }}
+                        <div class="form-text">Supports Markdown formatting</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i> Save Review
+                        </button>
+                    </div>
+                </form>
+                
+                {% if review %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Star rating interaction
+        const stars = document.querySelectorAll('.star-rating');
+        const ratingInput = document.getElementById('{{ review_form.rating.id }}');
+        
+        stars.forEach(star => {
+            star.addEventListener('click', function() {
+                const value = parseInt(this.getAttribute('data-value'));
+                ratingInput.value = value;
+                
+                stars.forEach((s, i) => {
+                    if (i < value) {
+                        s.classList.remove('far');
+                        s.classList.add('fas', 'text-warning');
+                    } else {
+                        s.classList.remove('fas', 'text-warning');
+                        s.classList.add('far');
+                    }
+                });
+            });
+        });
+        
+        // Show/hide progress fields based on status
+        const statusSelect = document.getElementById('{{ progress_form.status.id }}');
+        const progressContainer = document.getElementById('progress-container');
+        
+        function toggleProgressFields() {
+            if (statusSelect.value === 'reading') {
+                progressContainer.style.display = 'block';
+            } else {
+                progressContainer.style.display = 'none';
+            }
+        }
+        
+        // Initial toggle
+        toggleProgressFields();
+        
+        // Add event listener
+        statusSelect.addEventListener('change', toggleProgressFields);
+    });
+</script>
+{% endblock %}
+{% endblock %}
