@@ -18,17 +18,15 @@ def create_app():
     
     # Configure the app
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace("postgres://", "postgresql://", 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['PROPAGATE_EXCEPTIONS'] = True
-    app.config['SESSION_COOKIE_SECURE'] = True
     
-    # Initialize extensions
+    # Initialize extensions with app
     db.init_app(app)
     login_manager.init_app(app)
     bcrypt.init_app(app)
     
-    # Login manager setup
+    # Configure login
     login_manager.login_view = 'auth.login'
     login_manager.login_message_category = 'info'
     
@@ -45,8 +43,8 @@ def create_app():
     app.register_blueprint(challenges_bp)
     app.register_blueprint(profile_bp)
     
-    # Database setup
+    # Create tables if they don't exist
     with app.app_context():
         db.create_all()
     
-    return app
+    return app 
