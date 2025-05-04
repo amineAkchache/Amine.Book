@@ -19,9 +19,9 @@ def create_app():
     # Configure the app
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
     uri = os.environ.get('DATABASE_URL')
-if uri and uri.startswith('postgres://'):
-    uri = uri.replace('postgres://', 'postgresql://', 1)
-app.config['SQLALCHEMY_DATABASE_URI'] = uri
+    if uri and uri.startswith('postgres://'):
+        uri = uri.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     # Initialize extensions with app
