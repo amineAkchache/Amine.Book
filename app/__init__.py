@@ -18,16 +18,7 @@ def create_app():
     
     # Configure the app
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
-    
-    # Database configuration (Railway priority)
-    if 'MYSQL_URL' in os.environ:  # Railway MySQL
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['MYSQL_URL'].replace('mysql://', 'mysql+pymysql://')
-    else:  # Local development
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-            'SQLALCHEMY_DATABASE_URI',
-            'mysql+pymysql://root:123456789@localhost/book_tracker'
-        )
-    
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     # Initialize extensions with app
@@ -56,4 +47,4 @@ def create_app():
     with app.app_context():
         db.create_all()
     
-    return app
+    return app 
